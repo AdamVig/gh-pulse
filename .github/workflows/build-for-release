@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Keep release targets to the platforms we intend to support. The default gh-extension-precompile Go path cross-builds a
+# broader matrix, and the notifier dependency stack does not compile cleanly on some of those targets.
+
+tag="${1:?release tag is required}"
+bin_name="gh-pulse"
+
+mkdir -p dist
+
+for target in \
+  linux/amd64 \
+  linux/arm64 \
+  darwin/amd64 \
+  darwin/arm64 \
+  windows/amd64
+do
+  goos="${target%/*}"
+  goarch="${target#*/}"
+  ext=""
+
+  if [[ "$goos" == "windows" ]]; then
+    ext=".exe"
+  fi
+
+  output="dist/${bin_name}_${tag}_${goos}-${goarch}${ext}"
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -o "$output" .
+done

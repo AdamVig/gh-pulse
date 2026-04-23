@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      - name: Verify formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Run static analysis
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run race tests
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        run: go test -race ./...
+
+  release:
+    name: Release
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Compute tag
+        id: tag
+        run: echo "tag=$(date -u +%Y.%m.%d.%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish precompiled binaries
+        uses: cli/gh-extension-precompile@9e2237c30f869ad3bcaed6a4be2cd43564dd421b # v2.1.0
+        with:
+          go_version_file: go.mod
+          # The action's default Go cross-build path reaches targets that the desktop notification stack does not
+          # compile for cleanly.
+          build_script_override: .github/workflows/build-for-release
+          release_tag: ${{ steps.tag.outputs.tag }}
+          generate_attestations: true
