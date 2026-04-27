@@ -3,9 +3,9 @@ module github.com/AdamVig/gh-pulse
 go 1.26.2
 
 require (
-	github.com/cli/go-gh/v2 v2.12.2
+	github.com/cli/go-gh/v2 v2.13.0
 	github.com/gen2brain/beeep v0.11.2
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
